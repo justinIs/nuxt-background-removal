@@ -24,11 +24,12 @@
       ]
     },
     "typeRoots": [
-      "./types/shim-vue.d.ts",
+      "./types/shim-vue.d.ts"
     ],
     "types": [
       "@types/node",
-      "@nuxt/types"
+      "@nuxt/types",
+      "@types/dom-mediacapture-record"
     ]
   },
   "exclude": [

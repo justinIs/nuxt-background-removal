@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@nuxt/types": "^2.15.6",
-    "@nuxt/typescript-build": "^2.1.0"
+    "@nuxt/typescript-build": "^2.1.0",
+    "@types/dom-mediacapture-record": "^1.0.7"
   }
 }

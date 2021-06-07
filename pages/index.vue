@@ -1,7 +1,7 @@
 <template>
 <div class="container">
     <div class="video-container">
-        <CanvasPublisher v-if="session" class="video" :session="session" />
+        <CanvasPublisher v-if="session" ref="canvasPublisher" class="video" :session="session" />
     </div>
     <div class="controls-container">
         <div>Controls</div>
@@ -9,13 +9,16 @@
             <button @click="start">
                 Start
             </button>
+            <button @click="stop">
+                Stop
+            </button>
         </div>
     </div>
 </div>
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'nuxt-property-decorator'
+import { Component, Ref, Vue } from 'nuxt-property-decorator'
 import OT from '@opentok/client'
 import CanvasPublisher from '~/components/CanvasPublisher.vue'
 
@@ -23,6 +26,8 @@ import CanvasPublisher from '~/components/CanvasPublisher.vue'
     components: { CanvasPublisher }
 })
 export default class Index extends Vue {
+    @Ref('canvasPublisher') canvasPublisher?: CanvasPublisher
+
     session: OT.Session | null = null
 
     start() {
@@ -41,6 +46,11 @@ export default class Index extends Vue {
                 this.session = session
             }
         })
+    }
+
+    stop() {
+        this.canvasPublisher?.stop()
+        this.session?.disconnect()
     }
 }
 </script>

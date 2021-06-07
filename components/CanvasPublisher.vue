@@ -37,6 +37,8 @@ export default class OtPublisher extends Vue {
 
     backgroundImage: HTMLImageElement | undefined
 
+    processCanvas = false
+
     get videoWidth() {
         return this.quality === 'high' ? 640 : 320
     }
@@ -64,6 +66,12 @@ export default class OtPublisher extends Vue {
             videoSource: this.canvasVideoTrack
         })
         this.session.publish(this.publisher)
+    }
+
+    stop() {
+        this.publisher?.destroy()
+        this.processCanvas = false
+        ;(this.localVideo.srcObject as MediaStream).getTracks().forEach(track => track.stop())
     }
 
     private async initCanvasPublisher() {
@@ -116,7 +124,7 @@ export default class OtPublisher extends Vue {
         if (!canvasClone) {
             throw new Error('Unable to clone canvas context')
         }
-
+        this.processCanvas = true
         this.renderCanvas(canvasContext, canvasClone, net)
     }
 
@@ -144,7 +152,9 @@ export default class OtPublisher extends Vue {
         context.drawImage(this.backgroundImage, 0, 0, this.videoWidth, this.videoHeight)
         context.drawImage(cloneContext.canvas, 0, 0, this.videoWidth, this.videoHeight)
 
-        workerTimers.setTimeout(this.renderCanvas.bind(this, context, cloneContext, net), 30)
+        if (this.processCanvas) {
+            workerTimers.setTimeout(this.renderCanvas.bind(this, context, cloneContext, net), 30)
+        }
     }
 }
 </script>

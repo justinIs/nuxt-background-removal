@@ -1,19 +1,31 @@
 ## Introduction
 
-Last time, we looked at how we could do Background Removal with Tensorflow in an Agora Video Chat. We saw how semantic segmentation can be used to detect background
-pixels in a video stream. This time, we'll take a look at integrating background removal with the Vonage Video API, as well as some optimizations that we found
-that helped us run a bit more smoothly in production.
+[In a previous blog post](https://webrtc.ventures/2020/01/ai-in-webrtc-background-removal-with-tensorflow-in-an-agora-video-chat-2/)
+, we looked at how we could do background removal with Tensorflow in an Agora Video Chat. We saw how semantic 
+segmentation can be used to detect background pixels in a video stream. This time, we'll take a look at integrating
+background removal with the Vonage Video API, as well as some optimizations that we found that improved performance and
+usability.
 
 ## Initial Approach
 
-As we saw last time, we can use the bodyPix library to detect background pixels from a video stream, and then use HTML canvas to paint a filtered out
-image with our replaced background.
+As we saw last time, we can use the [BodyPix model](https://github.com/tensorflow/tfjs-models/tree/master/body-pix) to 
+detect background pixels from a video stream, and then use HTML canvas to paint a filtered out image with our replaced
+background.
 
 Let's look at a high level overview of our integration.
 ![alt text](./canvasPublisher.png)
 
-As we can see, we want to pipe our video stream into the bodyPix segmentation API, and draw a filtered out video stream onto an HTML canvas. We'll draw the background
-image onto the canvas before drawing the filtered video, this replacing the background. Here's how we can do that with some code
+On each render cycle, a snapshot of what is currently in the `<video>` tag is taken, and then given to the bodyPix
+segmentation API. The background image is drawn onto the output `<canvas>`. Then the background pixels from the
+segmentation are filtered out and drawn onto the `<canvas>`.
+
+At this point, the `<canvas>` now has the desired image of the user's body and a custom background. A video stream is 
+then taken from the `<canvas>` and provided to the OpenTok publisher as the user's video stream.
+
+This simple design makes it really clear how we are doing our rendering. Changing the rendering logic is pretty easy
+from this point of view - we just have to change what we are drawing onto the canvas.
+
+Here's how we can do that with some code:
 
 ```typescript
 private async startCanvasRendering() {
@@ -59,8 +71,8 @@ private async renderCanvas(context: CanvasRenderingContext2D, cloneContext: Canv
 }
 ```
 
-The key here is to use the segmented output from the bodyPix API and make the pixels identified as the background transparent. That way, when the filtered stream
-is drawn onto the output canvas, the background will be our image.
+The key here is to use the segmented output from the bodyPix API and make the pixels identified as the background 
+transparent. That way, when the filtered stream is drawn onto the output canvas, the background will be the custom image.
 
 While the canvas is now being rendered with a virtual background, we can capture a video stream from the canvas and provide that to the vonage API:
 
@@ -117,8 +129,10 @@ Looking at some documentation for [window.requestAnimationFrame](https://develop
 
 > `requestAnimationFrame()` calls are paused in most browsers when running in background tabs or hidden
 
-This API isn't well suited to our use case. Video calling today has expanded way beyond just being a conversation involving a simple video stream. Many users today
-want to have presentations where they are sharing content. Having our application always being in the foreground is not an option.
+This API initially sounds like the best tool for the job. However, this caveat makes itnot so well suited to our use 
+case. Video calling today has expanded way beyond just being a conversation involving a simple video stream. Many users
+today want to have presentations where they are sharing content. Having our application always being in the foreground 
+is not an option.
 
 One might think to try using something like `window.setTimeout` instead, but we have found similiar issues with this as well.
 [Turns out, this has been an issue for some time.](https://stackoverflow.com/questions/5927284/how-can-i-make-setinterval-also-work-when-a-tab-is-inactive-in-chrome/5927432#12522580)
@@ -158,10 +172,10 @@ The Worker Timers library basically provided us with a drop in replacement to ou
 also was able to successfully render our canvas publisher in a background tab and not have the rendering process 
 throttled by the browser.
 
-This solution works quite nicely on higher end devices. Testing this on an i7 2019 Macbook Pro with 32GB of RAM ran ok 
-for higher quality video with high accuracy settings on the BodyPix model. However this may not be as good for many 
-users today. Lower requirement configurations may be required along with some way to detect the specs of the user's
-harware.
+Higher end devices may be able to run this smoothly. Testing this on an i7 2019 Macbook Pro with 32GB of RAM ran ok 
+for higher quality video with high accuracy settings on the BodyPix model. However this may not be as good for medium
+to lower end devices many users have today. Lower requirement configurations may be required along with some way to 
+detect the specs of the user's harware, and choose and set the model appropriately.
 
 You can see the full POC code [here](https://github.com/justinIs/nuxt-background-removal)
 
